@@ -1,12 +1,8 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 #[derive(Clone)]
 pub struct Node {
     pub max_keys: usize,
     pub keys: Vec<u32>,
-    pub parent: Option<Rc<RefCell<Node>>>,
-    pub children: Vec<Rc<RefCell<Node>>>,
+    pub children: Vec<Box<Node>>,
 }
 
 impl Default for Node {
@@ -14,40 +10,43 @@ impl Default for Node {
         Node {
             max_keys: 4,
             keys: vec![],
-            parent: None,
             children: vec![],
         }
     }
 }
 
 impl Node {
+    fn new() -> Self {
+        Node {
+            keys: vec![],
+            children: vec![],
+            ..Default::default()
+        }
+    }
     pub fn min_keys(&self) -> usize {
         self.max_keys / 2
     }
 
     pub fn insert(&mut self, value: u32) {
-        if self.keys.len() == self.max_keys {
-            self.split_node()
-        } else {
-            self.keys.push(value);
+        self.keys.push(value);
+        if self.keys.len() >= self.max_keys {
+            self.split();
         }
     }
 
-    fn split_node(&mut self) {
-        self.parent = Some(Rc::new(RefCell::new(Node::default())));
-        let split_node = Node {
-            keys: self.keys.split_off(self.min_keys()),
-            parent: self.parent.clone(),
-            ..Default::default()
-        };
-        let child = Rc::new(RefCell::new(self));
-        let split_child = Rc::new(RefCell::new(split_node));
-        // if let Some(parent) = &mut self.parent {
-        //     parent
-        //         .borrow_mut()
-        //         .children
-        //         .append(&mut vec![child, split_child])
-        // }
+    fn split(&mut self) {
+        let middle = self.keys.len() / 2;
+        let middle_value = self.keys[middle].clone();
+
+        let mut left_node = Node::new();
+        left_node.keys.extend(self.keys.drain(..middle));
+
+        let mut right_node = Node::new();
+        right_node.keys.extend(self.keys.drain(1..));
+
+        self.keys.push(middle_value);
+        self.children.push(Box::new(left_node));
+        self.children.push(Box::new(right_node));
     }
 }
 
@@ -79,7 +78,6 @@ mod tests {
         assert_eq!(node.keys.len(), 0);
         node.insert(1);
         assert_eq!(node.keys.len(), 1);
-        assert!(node.parent.is_none());
     }
 
     #[test]
@@ -88,16 +86,12 @@ mod tests {
         let mut node = Node {
             max_keys: 4,
             keys: vec![1, 2, 3, 4],
-            parent: None,
             children: vec![],
         };
-        //Assert that the node has no parent (root node)
-        assert!(node.parent.is_none());
         //Call insert with a 5th key.
         node.insert(5);
-        //Assert that the node now has a parent node with a single key.
-        assert!(node.parent.is_some());
-        //Assert that the parent has 2 child nodes.
+        //Assert that the node now has two children with the correct keys.
+        assert_eq!(node.children.len(), 2);
         //Assert that the parent has the correct key.
         //Assert that the 5th key was added to the new child node.
     }
