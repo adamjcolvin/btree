@@ -1,4 +1,4 @@
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Node {
     pub max_keys: usize,
     pub keys: Vec<u32>,
@@ -35,16 +35,21 @@ impl Node {
     }
 
     fn split(&mut self) {
-        let middle = self.keys.len() / 2;
-        let middle_value = self.keys[middle].clone();
+        let key_middle_index = self.keys.len() / 2;
+        let middle_key = self.keys[key_middle_index].clone();
+        let child_middle_index = self.children.len() / 2;
 
         let mut left_node = Node::new();
-        left_node.keys.extend(self.keys.drain(..middle));
+        left_node.keys.extend(self.keys.drain(..key_middle_index));
+        left_node
+            .children
+            .extend(self.children.drain(..child_middle_index));
 
         let mut right_node = Node::new();
         right_node.keys.extend(self.keys.drain(1..));
+        right_node.children.extend(self.children.drain(..));
 
-        self.keys.push(middle_value);
+        self.keys.push(middle_key);
         self.children.push(Box::new(left_node));
         self.children.push(Box::new(right_node));
     }
@@ -81,19 +86,41 @@ mod tests {
     }
 
     #[test]
-    fn test_splitting_nodes() {
-        //Create a node with the maximum keys (4)
+    fn test_splitting_leaf_nodes() {
         let mut node = Node {
             max_keys: 4,
             keys: vec![1, 2, 3, 4],
             children: vec![],
         };
-        //Call insert with a 5th key.
         node.insert(5);
-        //Assert that the node now has two children with the correct keys.
         assert_eq!(node.children.len(), 2);
-        //Assert that the parent has the correct key.
-        //Assert that the 5th key was added to the new child node.
+        let expected_parent_key = node.keys.last().unwrap();
+        assert_eq!(*expected_parent_key, 3);
+        let expected_child_key = node.children.last().unwrap().keys.last().unwrap();
+        assert_eq!(*expected_child_key, 5);
+    }
+
+    #[test]
+    fn test_splitting_nodes_with_children() {
+        let child_1 = Box::new(Node {
+            keys: vec![1, 2, 3],
+            ..Default::default()
+        });
+        let child_2 = Box::new(Node {
+            keys: vec![4, 5, 6],
+            ..Default::default()
+        });
+        let mut node = Node {
+            max_keys: 4,
+            keys: vec![1, 2, 3, 4],
+            children: vec![child_1, child_2],
+        };
+        node.insert(5);
+        assert_eq!(node.children.len(), 2);
+        let moved_child_1 = node.children.first().unwrap().children.first().unwrap();
+        assert_eq!(*moved_child_1.keys, vec![1, 2, 3]);
+        let moved_child_2 = node.children.last().unwrap().children.last().unwrap();
+        assert_eq!(*moved_child_2.keys, vec![4, 5, 6]);
     }
 
     #[test]
