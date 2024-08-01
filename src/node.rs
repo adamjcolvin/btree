@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
-
 type RcNode = Box<Node>;
 
 #[derive(Clone, Debug)]
@@ -8,7 +5,7 @@ pub struct Node {
     pub max_keys: usize,
     pub keys: Vec<u32>,
     pub children: Vec<RcNode>,
-    pub parent: Option<Weak<RefCell<Node>>>,
+    pub parent: Option<RcNode>,
 }
 
 impl Default for Node {
