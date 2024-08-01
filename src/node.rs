@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
-type RcNode = Rc<RefCell<Node>>;
+type RcNode = Box<Node>;
 
 #[derive(Clone, Debug)]
 pub struct Node {
@@ -35,7 +35,7 @@ impl Node {
     }
 
     pub fn insert(value: u32, into_node: RcNode) -> RcNode {
-        let node = into_node.borrow();
+        let node = into_node.clone();
         let mut keys = node.keys.clone();
         let mut children: Vec<RcNode> = vec![];
         if node.children.len() == 0 {
@@ -47,17 +47,17 @@ impl Node {
         } else {
             children.extend(Node::insert_into_children(value, node.children.clone()));
         }
-        Rc::new(RefCell::new(Node {
+        Box::new(Node {
             keys,
             children,
             ..Default::default()
-        }))
+        })
     }
 
     fn insert_into_children(value: u32, children: Vec<RcNode>) -> Vec<RcNode> {
         let mut new_children: Vec<RcNode> = vec![];
         for (index, child) in children.iter().enumerate().rev() {
-            if let Some(lowest_key) = child.borrow().keys.first() {
+            if let Some(lowest_key) = child.keys.first() {
                 if value >= *lowest_key {
                     let new_child = Node::insert(value, child.clone());
                     new_children.insert(0, new_child);
@@ -74,6 +74,23 @@ impl Node {
             }
         }
         new_children
+    }
+
+    fn split(node: Node) -> RcNode {
+        let key_middle_index = node.keys.len() / 2;
+        let middle_key = node.keys[key_middle_index].clone();
+        let mut parent = node.parent.clone();
+
+        if let Some(parent) = node.parent {
+            //Insert into existing parent
+        } else {
+            //Create new parent
+        }
+        Box::new(Node {
+            keys: vec![middle_key],
+            parent,
+            ..Default::default()
+        })
     }
 
     // fn split(&mut self) {
@@ -141,42 +158,43 @@ mod tests {
     fn test_insert() {
         let node = Node::default();
         assert_eq!(node.keys.len(), 0);
-        let node_rc = Rc::new(RefCell::new(node));
-        let updated_node = Node::insert(5, node_rc);
-        assert_eq!(updated_node.borrow().keys.len(), 1);
+        let node = Box::new(node);
+        let updated_node = Node::insert(5, node);
+        assert_eq!(updated_node.keys.len(), 1);
     }
 
     #[test]
     fn test_insert_into_child_node() {
-        let child_1 = Rc::new(RefCell::new(Node::new(vec![4, 5, 6])));
-        let child_2 = Rc::new(RefCell::new(Node::new(vec![7, 8, 9])));
+        let child_1 = Box::new(Node::new(vec![4, 5, 6]));
+        let child_2 = Box::new(Node::new(vec![7, 8, 9]));
         let node = Node {
             max_keys: 4,
             keys: vec![1, 2, 3],
             children: vec![child_1, child_2],
             ..Default::default()
         };
-        let inserted_node = Node::insert(10, Rc::new(RefCell::new(node)));
-        assert_eq!(inserted_node.borrow().keys, vec![1, 2, 3]);
-        assert_eq!(inserted_node.borrow().children.len(), 2);
-        if let Some(child_1) = inserted_node.borrow().children.first() {
-            assert_eq!(child_1.borrow().keys, vec![4, 5, 6]);
+        let inserted_node = Node::insert(10, Box::new(node));
+        assert_eq!(inserted_node.keys, vec![1, 2, 3]);
+        assert_eq!(inserted_node.children.len(), 2);
+        if let Some(child_1) = inserted_node.children.first() {
+            assert_eq!(child_1.keys, vec![4, 5, 6]);
         };
-        if let Some(child_2) = inserted_node.borrow().children.last() {
-            assert_eq!(child_2.borrow().keys, vec![7, 8, 9, 10]);
+        if let Some(child_2) = inserted_node.children.last() {
+            assert_eq!(child_2.keys, vec![7, 8, 9, 10]);
         };
     }
 
     #[test]
     fn test_splitting_leaf_nodes() {
-        // let mut node = Node {
-        //     max_keys: 4,
-        //     keys: vec![1, 2, 3, 4],
-        //     children: vec![],
-        // };
-        // assert!(node.parent.is_none());
-        // node.insert(5);
-        // assert!(node.parent.is_some());
+        let node = Node {
+            max_keys: 4,
+            keys: vec![1, 2, 3, 4],
+            children: vec![],
+            parent: None,
+        };
+        assert!(node.parent.is_none());
+        let split_node = Node::insert(5, Box::new(node));
+        // assert!(split_node.borrow().parent.is_some());
         // let parent = node.parent;
         // assert_eq!(parent.children.len(), 2);
         // let expected_parent_key = parent.keys.last().unwrap();
