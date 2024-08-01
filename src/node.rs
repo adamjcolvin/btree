@@ -33,22 +33,21 @@ impl Node {
 
     pub fn insert(value: u32, into_node: RcNode) -> RcNode {
         let node = into_node.clone();
-        let mut keys = node.keys.clone();
-        let mut children: Vec<RcNode> = vec![];
+        let mut new_node = Box::new(Node::default());
+        new_node.keys = node.keys.clone();
+        new_node.children = vec![];
         if node.children.len() == 0 {
-            keys.push(value);
-            keys.sort();
-            if keys.len() > node.max_keys {
-                //Node::split()
+            new_node.keys.push(value);
+            new_node.keys.sort();
+            if new_node.keys.len() > node.max_keys {
+                new_node = Node::split(new_node);
             }
         } else {
-            children.extend(Node::insert_into_children(value, node.children.clone()));
+            new_node
+                .children
+                .extend(Node::insert_into_children(value, node.children.clone()));
         }
-        Box::new(Node {
-            keys,
-            children,
-            ..Default::default()
-        })
+        new_node
     }
 
     fn insert_into_children(value: u32, children: Vec<RcNode>) -> Vec<RcNode> {
@@ -73,7 +72,7 @@ impl Node {
         new_children
     }
 
-    fn split(node: Node) -> RcNode {
+    fn split(node: RcNode) -> RcNode {
         let key_middle_index = node.keys.len() / 2;
         let middle_key = node.keys[key_middle_index].clone();
         let mut parent = node.parent.clone();
@@ -82,6 +81,7 @@ impl Node {
             //Insert into existing parent
         } else {
             //Create new parent
+            parent = Some(Box::new(Node::default()));
         }
         Box::new(Node {
             keys: vec![middle_key],
@@ -191,7 +191,7 @@ mod tests {
         };
         assert!(node.parent.is_none());
         let split_node = Node::insert(5, Box::new(node));
-        // assert!(split_node.borrow().parent.is_some());
+        assert!(split_node.parent.is_some());
         // let parent = node.parent;
         // assert_eq!(parent.children.len(), 2);
         // let expected_parent_key = parent.keys.last().unwrap();
