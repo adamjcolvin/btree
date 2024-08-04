@@ -1,22 +1,22 @@
 mod node;
 pub use node::Node;
+use node::Nodeable;
 
-pub struct BTree {
+pub struct BTree<T: Nodeable> {
+    root_node: T,
     child_nodes: Vec<Node>,
 }
 
-impl BTree {
-    pub fn new(values: Vec<u32>) -> Self {
-        let node = Node {
-            max_keys: 4,
-            keys: values,
-            ..Node::default()
-        };
+impl<T: Default + Nodeable> Default for BTree<T> {
+    fn default() -> Self {
         BTree {
-            child_nodes: vec![node],
+            root_node: T::default(),
+            child_nodes: vec![],
         }
     }
+}
 
+impl<T: Nodeable> BTree<T> {
     pub fn count(&self) -> usize {
         self.child_nodes
             .clone()
@@ -69,14 +69,36 @@ impl BTree {
 mod tests {
     use super::*;
 
+    struct MockRootNode {}
+
+    impl Default for MockRootNode {
+        fn default() -> Self {
+            MockRootNode {}
+        }
+    }
+
+    impl Nodeable for MockRootNode {
+        fn insert(value: u32, into_node: Node) -> Node {
+            into_node
+        }
+    }
+
     #[test]
     fn test_root_node_minimum_keys() {}
 
     #[test]
     fn test_number_of_leaf_nodes() {
-        let mut btree = BTree::new(vec![]);
+        let mut btree: BTree<MockRootNode> = BTree::default();
         btree.insert(1);
         assert_eq!(btree.leaf_nodes().len(), 0);
+    }
+
+    fn test_inserting() {
+        let mut btree: BTree<MockRootNode> = BTree::default();
+        btree.root_node = MockRootNode {};
+        //Inject the root node here using a mock struct.
+        //Test the return value of insert.
+        //Test that the root node was used and the correct method called.
     }
 
     #[test]

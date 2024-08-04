@@ -1,3 +1,7 @@
+pub trait Nodeable {
+    fn insert(value: u32, into_node: Node) -> Node;
+}
+
 #[derive(Clone, Debug)]
 pub struct Node {
     pub max_keys: usize,
@@ -15,19 +19,8 @@ impl Default for Node {
     }
 }
 
-impl Node {
-    pub fn new(keys: Vec<u32>) -> Self {
-        Node {
-            keys,
-            ..Default::default()
-        }
-    }
-
-    pub fn min_keys(&self) -> usize {
-        self.max_keys / 2
-    }
-
-    pub fn insert(value: u32, into_node: Node) -> Node {
+impl Nodeable for Node {
+    fn insert(value: u32, into_node: Node) -> Node {
         let node = into_node.clone();
         let mut new_node = Node {
             keys: node.keys.clone(),
@@ -46,6 +39,19 @@ impl Node {
                 .extend(Node::insert_into_children(value, node.children.clone()));
         }
         new_node
+    }
+}
+
+impl Node {
+    pub fn new(keys: Vec<u32>) -> Self {
+        Node {
+            keys,
+            ..Default::default()
+        }
+    }
+
+    pub fn min_keys(&self) -> usize {
+        self.max_keys / 2
     }
 
     fn insert_into_children(value: u32, children: Vec<Node>) -> Vec<Node> {
