@@ -1,5 +1,5 @@
-pub trait Nodeable {
-    fn insert(value: u32, into_node: Node) -> Node;
+pub trait Nodeable<T: Nodeable<T>> {
+    fn insert(value: u32, into_node: T) -> T;
 }
 
 #[derive(Clone, Debug)]
@@ -19,7 +19,7 @@ impl Default for Node {
     }
 }
 
-impl Nodeable for Node {
+impl Nodeable<Node> for Node {
     fn insert(value: u32, into_node: Node) -> Node {
         let node = into_node.clone();
         let mut new_node = Node {
