@@ -2,7 +2,7 @@ mod node;
 pub use node::Node;
 use node::Nodeable;
 
-pub struct BTree<T: Nodeable<T>> {
+pub struct BTree<T: Nodeable<T> = Node> {
     root_node: T,
     child_nodes: Vec<Node>,
 }
