@@ -8,8 +8,8 @@ fn test_empty_btree() {
 #[test]
 fn test_tree_count() {
     let mut tree: BTree = BTree::default();
-    tree.bulk_insert(vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    // assert_eq!(tree.count(), 9);
+    tree.bulk_insert(vec![1, 2, 3, 4]);
+    assert_eq!(tree.count(), 4);
 }
 
 #[test]

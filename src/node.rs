@@ -1,5 +1,6 @@
 pub trait Nodeable<T: Nodeable<T>> {
     fn insert(value: u32, into_node: T) -> T;
+    fn count(node: T) -> usize;
 }
 
 #[derive(Clone, Debug)]
@@ -39,6 +40,18 @@ impl Nodeable<Node> for Node {
                 .extend(Node::insert_into_children(value, node.children.clone()));
         }
         new_node
+    }
+
+    fn count(node: Node) -> usize {
+        if node.children.len() == 0 {
+            node.keys.len()
+        } else {
+            node.children.iter().fold(node.keys.len(), |result, child| {
+                let mut acc = result.clone();
+                acc += Node::count(child.clone());
+                acc
+            })
+        }
     }
 }
 
@@ -165,6 +178,27 @@ mod tests {
         } else {
             panic!("Expected to find a child in the new parent node.")
         }
+    }
+
+    #[test]
+    fn test_count() {
+        let mut node = Node {
+            keys: vec![1, 2, 3],
+            ..Default::default()
+        };
+        assert_eq!(Node::count(node.clone()), 3);
+        node = Node::insert(4, node.clone());
+        assert_eq!(Node::count(node.clone()), 4);
+        let child_node_1 = Node {
+            keys: vec![5, 6, 7],
+            ..Default::default()
+        };
+        let child_node_2 = Node {
+            keys: vec![8, 9, 10],
+            ..Default::default()
+        };
+        node.children = vec![child_node_1, child_node_2];
+        assert_eq!(Node::count(node), 10);
     }
 
     #[test]

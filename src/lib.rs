@@ -4,25 +4,19 @@ use node::Nodeable;
 
 pub struct BTree<T: Nodeable<T> = Node> {
     root_node: T,
-    child_nodes: Vec<Node>,
 }
 
 impl<T: Default + Nodeable<T>> Default for BTree<T> {
     fn default() -> Self {
         BTree {
             root_node: T::default(),
-            child_nodes: vec![],
         }
     }
 }
 
 impl<T: Clone + Nodeable<T>> BTree<T> {
     pub fn count(&self) -> usize {
-        self.child_nodes
-            .clone()
-            .into_iter()
-            .map(|node| node.keys.len())
-            .sum()
+        T::count(self.root_node.clone())
     }
 
     pub fn insert(&mut self, value: u32) {
@@ -35,7 +29,7 @@ impl<T: Clone + Nodeable<T>> BTree<T> {
         }
     }
 
-    pub fn remove(&mut self, value: u32) {
+    pub fn remove(&mut self, _value: u32) {
         // for node in &mut self.child_nodes {
         //     if let Some(index) = node.keys.iter().position(|&x| x == value) {
         //         node.keys.remove(index);
@@ -65,10 +59,14 @@ mod tests {
     }
 
     impl Nodeable<MockRootNode> for MockRootNode {
-        fn insert(value: u32, into_node: MockRootNode) -> MockRootNode {
+        fn insert(_value: u32, into_node: MockRootNode) -> MockRootNode {
             let mut node = into_node.clone();
             node.insert_called += 1;
             node
+        }
+
+        fn count(_node: MockRootNode) -> usize {
+            0
         }
     }
 
