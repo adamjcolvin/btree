@@ -16,14 +16,14 @@ fn test_tree_count() {
 fn test_inserting_element() {
     let mut btree: BTree = BTree::default();
     btree.insert(1);
-    // assert_eq!(btree.count(), 1);
+    assert_eq!(btree.count(), 1);
 }
 
 #[test]
 fn test_inserting_multiple_elements() {
     let mut btree: BTree = BTree::default();
     btree.bulk_insert(vec![1, 2, 3]);
-    // assert_eq!(btree.count(), 3);
+    assert_eq!(btree.count(), 3);
 }
 
 #[test]

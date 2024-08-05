@@ -20,7 +20,8 @@ impl<T: Clone + Nodeable<T>> BTree<T> {
     }
 
     pub fn insert(&mut self, value: u32) {
-        self.root_node = T::insert(value, self.root_node.clone());
+        self.root_node = T::insert(value, self.root_node.clone())
+            .expect("There was problem inserting the value");
     }
 
     pub fn bulk_insert(&mut self, values: Vec<u32>) {
@@ -59,10 +60,10 @@ mod tests {
     }
 
     impl Nodeable<MockRootNode> for MockRootNode {
-        fn insert(_value: u32, into_node: MockRootNode) -> MockRootNode {
+        fn insert(_value: u32, into_node: MockRootNode) -> Option<MockRootNode> {
             let mut node = into_node.clone();
             node.insert_called += 1;
-            node
+            Some(node)
         }
 
         fn count(_node: MockRootNode) -> usize {

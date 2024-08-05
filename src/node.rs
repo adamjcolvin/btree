@@ -1,13 +1,27 @@
+use std::cmp::Ordering;
+
 pub trait Nodeable<T: Nodeable<T>> {
-    fn insert(value: u32, into_node: T) -> T;
+    fn insert(value: u32, into_node: T) -> Option<T>;
     fn count(node: T) -> usize;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Node {
     pub max_keys: usize,
     pub keys: Vec<u32>,
     pub children: Vec<Node>,
+}
+
+impl PartialOrd for Node {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Node {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.keys.cmp(&other.keys)
+    }
 }
 
 impl Default for Node {
@@ -21,25 +35,20 @@ impl Default for Node {
 }
 
 impl Nodeable<Node> for Node {
-    fn insert(value: u32, into_node: Node) -> Node {
-        let node = into_node.clone();
-        let mut new_node = Node {
-            keys: node.keys.clone(),
-            children: vec![],
-            ..Default::default()
-        };
-        if node.children.len() == 0 {
-            new_node.keys.push(value);
-            new_node.keys.sort();
-            if new_node.keys.len() > node.max_keys {
-                new_node = Node::split(new_node);
-            }
+    fn insert(value: u32, into_node: Node) -> Option<Node> {
+        let mut new_node = Node::default();
+        if into_node.can_be_inserted(&value) {
+            new_node.insert_keys_from_node_and_sort(value, into_node);
+            new_node = Node::split_if_needed(new_node);
+            new_node.children.sort();
+            Some(new_node)
+        } else if into_node.is_parent() {
+            new_node = Node::insert_into_children(value, &into_node);
+            new_node.children.sort();
+            Some(new_node)
         } else {
-            new_node
-                .children
-                .extend(Node::insert_into_children(value, node.children.clone()));
+            None
         }
-        new_node
     }
 
     fn count(node: Node) -> usize {
@@ -67,29 +76,74 @@ impl Node {
         self.max_keys / 2
     }
 
-    fn insert_into_children(value: u32, children: Vec<Node>) -> Vec<Node> {
-        let mut new_children: Vec<Node> = vec![];
-        for (index, child) in children.iter().enumerate().rev() {
-            if let Some(lowest_key) = child.keys.first() {
-                if value >= *lowest_key {
-                    let new_child = Node::insert(value, child.clone());
-                    new_children.insert(0, new_child);
-                    let remaining_children = &children[..index].to_vec();
-                    new_children = remaining_children
-                        .iter()
-                        .cloned()
-                        .chain(new_children)
-                        .collect();
-                    break;
-                } else {
-                    new_children.insert(0, child.clone());
-                }
-            }
+    fn can_be_inserted(&self, value: &u32) -> bool {
+        if self.keys.is_empty() {
+            true
+        } else if let Some(first) = self.keys.first() {
+            value >= first && self.children.is_empty()
+        } else {
+            false
         }
-        new_children
     }
 
-    fn split(node: Node) -> Node {
+    fn is_parent(&self) -> bool {
+        self.children.len() > 0
+    }
+
+    fn requires_splitting(&self) -> bool {
+        self.keys.len() > self.max_keys
+    }
+
+    fn remaining_children(&self, index: usize) -> Vec<Node> {
+        let mut remaining = self.children.clone();
+        remaining.remove(index);
+        remaining
+    }
+
+    fn insert_keys_from_node_and_sort(&mut self, value: u32, node: Node) {
+        self.keys = node.keys.clone();
+        self.keys.push(value);
+        self.keys.sort();
+    }
+
+    fn insert_into_children(value: u32, node: &Node) -> Node {
+        let mut new_node = node.clone();
+        for (index, child) in node.children.iter().enumerate().rev() {
+            if !child.can_be_inserted(&value) {
+                continue;
+            }
+            if let Some(child_node) = Node::insert(value, child.clone()) {
+                let child_was_split = child_node.is_parent();
+                let remaining_children = new_node.remaining_children(index);
+                if child_was_split {
+                    new_node = Node::combine_parent_and_child(&node, &child_node);
+                    new_node.children = child_node.children.clone();
+                    new_node.children.extend(remaining_children);
+                    new_node = Node::split_if_needed(new_node);
+                } else {
+                    new_node.children = vec![child_node];
+                    new_node.children.extend(remaining_children);
+                    println!(
+                        "New child keys = {:?}",
+                        new_node.children.last().unwrap().keys
+                    );
+                }
+                break;
+            };
+        }
+        new_node
+    }
+
+    fn combine_parent_and_child(parent_node: &Node, child_node: &Node) -> Node {
+        let mut new_node = parent_node.clone();
+        new_node.keys.extend(child_node.keys.clone());
+        new_node
+    }
+
+    fn split_if_needed(node: Node) -> Node {
+        if !node.requires_splitting() {
+            return node;
+        }
         let key_middle_index = node.keys.len() / 2;
         let middle_key = node.keys[key_middle_index].clone();
         let mut keys = node.keys.clone();
@@ -129,9 +183,10 @@ mod tests {
     fn test_insert() {
         let node = Node::default();
         assert_eq!(node.keys.len(), 0);
-        let updated_node = Node::insert(5, node);
-        assert_eq!(updated_node.keys.len(), 1);
-        assert_eq!(*updated_node.keys.first().unwrap(), 5);
+        if let Some(updated_node) = Node::insert(5, node) {
+            assert_eq!(updated_node.keys.len(), 1);
+            assert_eq!(*updated_node.keys.first().unwrap(), 5);
+        }
     }
 
     #[test]
@@ -144,14 +199,15 @@ mod tests {
             children: vec![child_1, child_2],
             ..Default::default()
         };
-        let inserted_node = Node::insert(10, node);
-        assert_eq!(inserted_node.keys, vec![1, 2, 3]);
-        assert_eq!(inserted_node.children.len(), 2);
-        if let Some(child_1) = inserted_node.children.first() {
-            assert_eq!(child_1.keys, vec![4, 5, 6]);
-        }
-        if let Some(child_2) = inserted_node.children.last() {
-            assert_eq!(child_2.keys, vec![7, 8, 9, 10]);
+        if let Some(inserted_node) = Node::insert(10, node) {
+            assert_eq!(inserted_node.keys, vec![1, 2, 3]);
+            assert_eq!(inserted_node.children.len(), 2);
+            if let Some(child_1) = inserted_node.children.first() {
+                assert_eq!(child_1.keys, vec![4, 5, 6]);
+            }
+            if let Some(last_child) = inserted_node.children.last() {
+                assert_eq!(last_child.keys, vec![7, 8, 9, 10]);
+            }
         }
     }
 
@@ -162,21 +218,22 @@ mod tests {
             keys: vec![1, 2, 3, 4],
             children: vec![],
         };
-        let new_parent_node = Node::insert(5, node);
-        assert_eq!(new_parent_node.children.len(), 2);
-        if let Some(parent_key) = new_parent_node.keys.first() {
-            assert_eq!(*parent_key, 3);
-        } else {
-            panic!("Expected to find a key of value 3");
-        }
-        if let Some(last_child) = new_parent_node.children.last() {
-            if let Some(last_key) = last_child.keys.last() {
-                assert_eq!(*last_key, 5);
+        if let Some(new_parent_node) = Node::insert(5, node) {
+            assert_eq!(new_parent_node.children.len(), 2);
+            if let Some(parent_key) = new_parent_node.keys.first() {
+                assert_eq!(*parent_key, 3);
             } else {
-                panic!("Expected to find a key value 5");
+                panic!("Expected to find a key of value 3");
             }
-        } else {
-            panic!("Expected to find a child in the new parent node.")
+            if let Some(last_child) = new_parent_node.children.last() {
+                if let Some(last_key) = last_child.keys.last() {
+                    assert_eq!(*last_key, 5);
+                } else {
+                    panic!("Expected to find a key value 5");
+                }
+            } else {
+                panic!("Expected to find a child in the new parent node.")
+            }
         }
     }
 
@@ -187,7 +244,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(Node::count(node.clone()), 3);
-        node = Node::insert(4, node.clone());
+        node = Node::insert(4, node.clone()).unwrap();
         assert_eq!(Node::count(node.clone()), 4);
         let child_node_1 = Node {
             keys: vec![5, 6, 7],
