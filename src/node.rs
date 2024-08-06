@@ -148,7 +148,7 @@ impl Node {
         let middle_key = node.keys[key_middle_index].clone();
         let mut keys = node.keys.clone();
         let split_node = Node::new(keys.drain(..key_middle_index).collect());
-        let right_node = Node::new(keys.drain(..).collect());
+        let right_node = Node::new(keys.drain(1..).collect());
         Node {
             keys: vec![middle_key],
             children: vec![split_node.clone(), right_node.clone()],
@@ -190,6 +190,18 @@ mod tests {
     }
 
     #[test]
+    fn test_multiple_inserts() {
+        let mut node = Node::default();
+        assert_eq!(node.keys.len(), 0);
+        node = Node::insert(1, node.clone()).unwrap_or_default();
+        node = Node::insert(2, node.clone()).unwrap_or_default();
+        node = Node::insert(3, node.clone()).unwrap_or_default();
+        node = Node::insert(4, node.clone()).unwrap_or_default();
+        node = Node::insert(5, node.clone()).unwrap_or_default();
+        assert_eq!(Node::count(node), 5);
+    }
+
+    #[test]
     fn test_insert_into_child_node() {
         let child_1 = Node::new(vec![4, 5, 6]);
         let child_2 = Node::new(vec![7, 8, 9]);
@@ -220,17 +232,9 @@ mod tests {
         };
         if let Some(new_parent_node) = Node::insert(5, node) {
             assert_eq!(new_parent_node.children.len(), 2);
-            if let Some(parent_key) = new_parent_node.keys.first() {
-                assert_eq!(*parent_key, 3);
-            } else {
-                panic!("Expected to find a key of value 3");
-            }
+            assert_eq!(new_parent_node.keys, vec![3]);
             if let Some(last_child) = new_parent_node.children.last() {
-                if let Some(last_key) = last_child.keys.last() {
-                    assert_eq!(*last_key, 5);
-                } else {
-                    panic!("Expected to find a key value 5");
-                }
+                assert_eq!(last_child.keys, vec![4, 5]);
             } else {
                 panic!("Expected to find a child in the new parent node.")
             }

@@ -22,15 +22,16 @@ fn test_inserting_element() {
 #[test]
 fn test_inserting_multiple_elements() {
     let mut btree: BTree = BTree::default();
-    btree.bulk_insert(vec![1, 2, 3]);
-    assert_eq!(btree.count(), 3);
+    btree.bulk_insert(vec![1, 2, 3, 4, 5]);
+    assert_eq!(btree.count(), 5);
 }
 
 #[test]
 fn test_removing_element() {
-    // let mut btree: BTree<Node> = BTree::default();
+    let mut btree: BTree = BTree::default();
+    btree.bulk_insert(vec![1, 2, 3, 4, 5]);
+    assert_eq!(btree.count(), 5);
     // btree.remove(5);
-    // assert_eq!(btree.count(), 4);
 }
 
 #[test]
