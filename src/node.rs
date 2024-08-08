@@ -72,24 +72,14 @@ impl Nodeable<Node> for Node {
             new_node.keys = keys;
             Some(new_node)
         } else if new_node.children.len() > 0 {
-            let middle_index = keys.len() / 2;
-            let middle_key = keys[middle_index];
-            let mut children = from_node.children.clone();
-            let possible: &[Node];
-            if value > middle_key {
-                possible = &children[middle_index + 1..];
-            } else {
-                possible = &children[..middle_index + 1];
-            };
-            for child in possible {
+            for child in Node::possible_children_for_removal(value, &from_node) {
                 if let Some(removed_from) = Node::remove(value, child.clone()) {
-                    let index = children.iter().position(|c| c == child).unwrap();
-                    children.remove(index);
-                    children.insert(index, removed_from);
+                    let index = new_node.children.iter().position(|c| c == child).unwrap();
+                    new_node.children.remove(index);
+                    new_node.children.insert(index, removed_from);
                     break;
                 }
             }
-            new_node.children = children;
             Some(new_node)
         } else {
             None
@@ -186,6 +176,16 @@ impl Node {
             keys: vec![middle_key],
             children: vec![split_node.clone(), right_node.clone()],
             ..Node::default()
+        }
+    }
+
+    fn possible_children_for_removal(value: u32, from_node: &Node) -> &[Node] {
+        let middle_index = from_node.keys.len() / 2;
+        let middle_key = from_node.keys[middle_index];
+        if value > middle_key {
+            &from_node.children[middle_index + 1..]
+        } else {
+            &from_node.children[..middle_index + 1]
         }
     }
 }
