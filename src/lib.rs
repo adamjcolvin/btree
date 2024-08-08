@@ -31,11 +31,8 @@ impl<T: Clone + Nodeable<T>> BTree<T> {
     }
 
     pub fn remove(&mut self, _value: u32) {
-        // for node in &mut self.child_nodes {
-        //     if let Some(index) = node.keys.iter().position(|&x| x == value) {
-        //         node.keys.remove(index);
-        //     }
-        // }
+        // self.root_node = T::remove(value, self.root_node.clone())
+        //     .expect("There was a problem removing the value");
     }
 
     pub fn leaf_nodes(&self) -> Vec<Node> {
@@ -68,6 +65,10 @@ mod tests {
 
         fn count(_node: MockRootNode) -> usize {
             0
+        }
+
+        fn remove(_value: u32, from_node: MockRootNode) -> Option<MockRootNode> {
+            Some(from_node.clone())
         }
     }
 

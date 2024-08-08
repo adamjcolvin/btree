@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 
 pub trait Nodeable<T: Nodeable<T>> {
     fn insert(value: u32, into_node: T) -> Option<T>;
+    fn remove(value: u32, from_node: T) -> Option<T>;
     fn count(node: T) -> usize;
 }
 
@@ -60,6 +61,38 @@ impl Nodeable<Node> for Node {
                 acc += Node::count(child.clone());
                 acc
             })
+        }
+    }
+
+    fn remove(value: u32, from_node: Node) -> Option<Node> {
+        let mut keys = from_node.keys.clone();
+        let mut new_node = from_node.clone();
+        if let Some(index) = keys.iter().position(|&x| x == value) {
+            keys.remove(index);
+            new_node.keys = keys;
+            Some(new_node)
+        } else if new_node.children.len() > 0 {
+            let middle_index = keys.len() / 2;
+            let middle_key = keys[middle_index];
+            let mut children = from_node.children.clone();
+            let possible: &[Node];
+            if value > middle_key {
+                possible = &children[middle_index + 1..];
+            } else {
+                possible = &children[..middle_index + 1];
+            };
+            for child in possible {
+                if let Some(removed_from) = Node::remove(value, child.clone()) {
+                    let index = children.iter().position(|c| c == child).unwrap();
+                    children.remove(index);
+                    children.insert(index, removed_from);
+                    break;
+                }
+            }
+            new_node.children = children;
+            Some(new_node)
+        } else {
+            None
         }
     }
 }
@@ -263,5 +296,36 @@ mod tests {
     }
 
     #[test]
-    fn test_number_of_child_nodes() {}
+    fn test_removing() {
+        let node = Node {
+            keys: vec![1, 2, 3, 4],
+            ..Default::default()
+        };
+        if let Some(new_node) = Node::remove(4, node) {
+            assert_eq!(new_node.keys, vec![1, 2, 3]);
+        }
+    }
+
+    #[test]
+    fn test_remove_from_children() {
+        let child_1 = Node {
+            keys: vec![0, 1, 2],
+            ..Default::default()
+        };
+        let child_2 = Node {
+            keys: vec![4, 5, 6],
+            ..Default::default()
+        };
+        let node = Node {
+            keys: vec![3],
+            children: vec![child_1, child_2],
+            ..Default::default()
+        };
+        if let Some(new_node) = Node::remove(4, node) {
+            let last_child = new_node.children.last().unwrap();
+            assert_eq!(last_child.keys, vec![5, 6]);
+        } else {
+            panic!("Could not remove element");
+        }
+    }
 }
