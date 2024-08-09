@@ -72,11 +72,15 @@ impl Nodeable<Node> for Node {
             new_node.keys = keys;
             Some(new_node)
         } else if new_node.children.len() > 0 {
-            for child in Node::possible_children_for_removal(value, &from_node) {
+            for child in Node::possible_children_for_removal(value, &new_node) {
                 if let Some(removed_from) = Node::remove(value, child.clone()) {
-                    let index = new_node.children.iter().position(|c| c == child).unwrap();
-                    new_node.children.remove(index);
-                    new_node.children.insert(index, removed_from);
+                    if removed_from.keys.len() < removed_from.min_keys() {
+                        new_node = Node::rebalance_after_removal(value, &new_node);
+                    } else {
+                        let index = new_node.children.iter().position(|c| c == child).unwrap();
+                        new_node.children.remove(index);
+                        new_node.children.insert(index, removed_from);
+                    }
                     break;
                 }
             }
@@ -187,6 +191,39 @@ impl Node {
         } else {
             &from_node.children[..middle_index + 1]
         }
+    }
+
+    fn gather_keys(node: &Node) -> Vec<u32> {
+        let mut new_keys = node.keys.clone();
+        if node.children.len() > 0 {
+            let child_keys = node.children.iter().fold(vec![], |result, child| {
+                let mut acc = result.clone();
+                let child_keys = Node::gather_keys(child);
+                acc.extend(child_keys);
+                acc.sort();
+                acc
+            });
+            new_keys.extend(child_keys);
+            new_keys.sort();
+        }
+        new_keys
+    }
+
+    fn rebalance_after_removal(removed_key: u32, node: &Node) -> Node {
+        let mut new_node = node.clone();
+        let mut gathered_keys = Node::gather_keys(&new_node);
+        let index = gathered_keys
+            .iter()
+            .position(|k| *k == removed_key)
+            .unwrap();
+        gathered_keys.remove(index);
+        new_node.children = vec![];
+        new_node.keys = vec![];
+        gathered_keys.iter().for_each(|k| {
+            new_node =
+                Node::insert(*k, new_node.clone()).expect("There was an issue inserting the key.");
+        });
+        new_node
     }
 }
 
@@ -326,6 +363,39 @@ mod tests {
             assert_eq!(last_child.keys, vec![5, 6]);
         } else {
             panic!("Could not remove element");
+        }
+    }
+
+    #[test]
+    fn test_removing_missing_value() {
+        let node = Node {
+            keys: vec![1, 2, 3, 4],
+            ..Default::default()
+        };
+        let result = Node::remove(5, node);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_removing_when_node_is_unbalanced() {
+        let child_1 = Node {
+            keys: vec![1, 2],
+            ..Default::default()
+        };
+        let child_2 = Node {
+            keys: vec![4, 5],
+            ..Default::default()
+        };
+        let node = Node {
+            keys: vec![3],
+            children: vec![child_1, child_2],
+            ..Default::default()
+        };
+        if let Some(result) = Node::remove(4, node) {
+            assert_eq!(result.keys, vec![1, 2, 3, 5]);
+            assert_eq!(result.children.len(), 0);
+        } else {
+            panic!("Error removing value")
         }
     }
 }
