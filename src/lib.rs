@@ -30,9 +30,16 @@ impl<T: Clone + Nodeable<T>> BTree<T> {
         }
     }
 
-    pub fn remove(&mut self, _value: u32) {
-        // self.root_node = T::remove(value, self.root_node.clone())
-        //     .expect("There was a problem removing the value");
+    pub fn remove(&mut self, value: u32) {
+        if let Some(new_root) = T::remove(value, self.root_node.clone()) {
+            self.root_node = new_root;
+        }
+    }
+
+    pub fn bulk_remove(&mut self, values: Vec<u32>) {
+        for value in values {
+            self.remove(value);
+        }
     }
 
     pub fn leaf_nodes(&self) -> Vec<Node> {
@@ -48,11 +55,15 @@ mod tests {
     #[derive(Clone, Debug)]
     struct MockRootNode {
         insert_called: usize,
+        remove_called: usize,
     }
 
     impl Default for MockRootNode {
         fn default() -> Self {
-            MockRootNode { insert_called: 0 }
+            MockRootNode {
+                insert_called: 0,
+                remove_called: 0,
+            }
         }
     }
 
@@ -68,7 +79,9 @@ mod tests {
         }
 
         fn remove(_value: u32, from_node: MockRootNode) -> Option<MockRootNode> {
-            Some(from_node.clone())
+            let mut node = from_node.clone();
+            node.remove_called += 1;
+            Some(node)
         }
     }
 
@@ -88,6 +101,16 @@ mod tests {
         btree.root_node = MockRootNode::default();
         btree.insert(1);
         assert_eq!(btree.root_node.insert_called, 1);
+    }
+
+    #[test]
+    fn test_removing() {
+        let mut btree: BTree<MockRootNode> = BTree::default();
+        btree.root_node = MockRootNode::default();
+        btree.bulk_insert(vec![1, 2, 3]);
+        assert_eq!(btree.root_node.insert_called, 3);
+        btree.remove(2);
+        assert_eq!(btree.root_node.remove_called, 1);
     }
 
     #[test]
