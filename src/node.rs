@@ -4,6 +4,7 @@ pub trait Nodeable<T: Nodeable<T>> {
     fn insert(value: u32, into_node: T) -> Option<T>;
     fn remove(value: u32, from_node: T) -> Option<T>;
     fn count(node: T) -> usize;
+    fn contains(value: u32, in_node: &T) -> bool;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -88,6 +89,11 @@ impl Nodeable<Node> for Node {
         } else {
             None
         }
+    }
+
+    fn contains(value: u32, in_node: &Node) -> bool {
+        let keys = Node::gather_keys(in_node);
+        keys.contains(&value)
     }
 }
 
@@ -397,5 +403,17 @@ mod tests {
         } else {
             panic!("Error removing value")
         }
+    }
+
+    #[test]
+    fn test_contains() {
+        let mut node = Node::default();
+        node = Node::insert(1, node).unwrap();
+        node = Node::insert(2, node).unwrap();
+        node = Node::insert(4, node).unwrap();
+        node = Node::insert(5, node).unwrap();
+        assert!(Node::contains(5, &node));
+        node = Node::remove(5, node).unwrap();
+        assert!(!Node::contains(5, &node));
     }
 }

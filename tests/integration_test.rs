@@ -43,3 +43,12 @@ fn test_removing_multiple_elements() {
     btree.bulk_remove(vec![2, 3, 4]);
     assert_eq!(btree.count(), 2);
 }
+
+#[test]
+fn test_contains() {
+    let mut btree: BTree = BTree::default();
+    btree.bulk_insert(vec![1, 2, 3, 4, 5]);
+    assert!(btree.contains(3));
+    btree.remove(3);
+    assert!(!btree.contains(3));
+}

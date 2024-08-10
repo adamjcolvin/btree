@@ -42,6 +42,10 @@ impl<T: Clone + Nodeable<T>> BTree<T> {
         }
     }
 
+    pub fn contains(&self, value: u32) -> bool {
+        T::contains(value, &self.root_node)
+    }
+
     pub fn leaf_nodes(&self) -> Vec<Node> {
         let leaf_nodes: Vec<Node> = vec![];
         leaf_nodes
@@ -83,6 +87,10 @@ mod tests {
             node.remove_called += 1;
             Some(node)
         }
+
+        fn contains(_value: u32, _in_node: &MockRootNode) -> bool {
+            true
+        }
     }
 
     #[test]
@@ -112,10 +120,4 @@ mod tests {
         btree.remove(2);
         assert_eq!(btree.root_node.remove_called, 1);
     }
-
-    #[test]
-    fn test_leaf_nodes_at_same_level() {}
-
-    #[test]
-    fn test_balancing() {}
 }
